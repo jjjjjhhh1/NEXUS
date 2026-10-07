@@ -1,4 +1,6 @@
-# NEXUS · AI 银行管家
+<p align="center">
+  <img src="assets/readme/title.svg" width="100%" alt="NEXUS · AI 银行管家：以对话连接账户、转账与财务分析">
+</p>
 
 <p>
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">

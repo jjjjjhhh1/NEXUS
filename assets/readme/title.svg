@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">NEXUS · AI 银行管家</title>
+  <desc id="desc">以对话连接账户、转账与财务分析。深蓝色背景上的 NEXUS 标题与青色连接标识。</desc>
+  <defs>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#06111f"/><stop offset="1" stop-color="#102e4b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#35d8d0"/><stop offset="1" stop-color="#4c83ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="380" rx="24" fill="url(#surface)"/>
+  <g font-family="Segoe UI, Microsoft YaHei, PingFang SC, sans-serif">
+    <text x="64" y="72" fill="#35d8d0" font-size="21" letter-spacing="4">CONVERSATIONAL BANKING DEMO</text>
+    <text x="56" y="198" fill="#edf7ff" font-size="120" font-weight="750" letter-spacing="6">NEXUS</text>
+    <text x="64" y="260" fill="#edf7ff" font-size="38" font-weight="600">AI 银行管家</text>
+    <text x="64" y="318" fill="#a6bfd2" font-size="24">以对话连接账户、转账与财务分析</text>
+  </g>
+  <g transform="translate(884 80)">
+    <rect width="236" height="220" rx="38" fill="#06111f" stroke="#294866" stroke-width="2"/>
+    <path d="M58 160V60l120 100V60" fill="none" stroke="url(#accent)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="58" cy="60" r="12" fill="#35d8d0"/><circle cx="178" cy="160" r="12" fill="#4c83ff"/>
+  </g>
+</svg>
