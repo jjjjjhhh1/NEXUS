@@ -1,0 +1,52 @@
+# Nexus · AI 银行管家 —— 运行依赖
+#
+# 版本为本项目实测通过的版本，非最新。金融场景下，一个可复现的版本组合
+# 比一个"应该也能跑"的浮动版本更有价值。
+#
+# 安装：pip install -r requirements.txt
+
+# --- Web 层 ---
+fastapi==0.110.0
+uvicorn==0.29.0
+starlette==0.36.3
+anyio==4.12.0
+
+# --- 数据校验与配置 ---
+# pydantic v2：意图理解、排版决策、合规审查三层都用它做封闭 schema 校验
+pydantic==2.13.5
+pydantic-settings==2.2.1
+
+# --- 持久化 ---
+# 演示态固定 SQLite；同步 ORM 的异步封装
+sqlalchemy==2.0.36
+aiosqlite==0.20.0
+greenlet==3.2.3
+
+# --- Agent 编排 ---
+# 意图路由与节点编排；模型调用走 HTTP，不依赖 langchain 的模型封装
+langgraph==0.2.34
+langchain-core==0.2.43
+langchain==0.2.16
+
+# --- 外部数据 ---
+# 汇率 / 宏观指标 / SEC 披露均为出站只读调用
+httpx==0.27.0
+
+# --- 二次核验口令哈希 ---
+cryptography==42.0.5
+
+# --- 登录口令哈希 ---
+# bcrypt。work factor 在 backend/core/auth.py 里定为 12。
+# 之前它只是 langchain 的传递依赖，requirements.txt 里没有——部署到新机器时
+# 登录会直接 ImportError，而不是在测试里发现。
+bcrypt==4.1.3
+
+# --- 测试 ---
+pytest==8.1.1
+pytest-asyncio==0.23.6
+
+# Agent provider adapter and schema migration CLI
+langchain-openai==0.1.25
+alembic==1.13.3
+
+loguru==0.7.2

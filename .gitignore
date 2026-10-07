@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+.pytest_cache/
+
+# Local environment and delivery archives
+.venv/
+.runtime/
+*.log
+*.zip
+本机部署说明.md

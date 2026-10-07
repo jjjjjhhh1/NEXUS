@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>登录 · Nexus AI 银行管家</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/login.js" defer></script>
+</head>
+<!--
+  这是一个**独立页面**，不是盖在主界面上的蒙版。
+  之前把登录做成了 body 上的一个 fixed 浮层：登录成功后浮层被删掉了，
+  但 body 上的 login-locked 没摘，于是 style.css 里给 .app-shell 的
+  blur(6px) 一直生效 —— 登录进去看到的整个界面是虚的。
+  改成独立页面之后根本不存在"浮层盖住主界面"这回事：登录页里没有主界面，
+  登录成功后直接 location.replace('/') 跳过去，全屏干净。
+-->
+<body class="login-page">
+  <main class="login-gate">
+    <div class="login-panel">
+      <div class="login-brand"><span class="login-mark">N</span></div>
+      <h1>AI 银行管家</h1>
+      <p class="login-sub">本环境仅对受邀评审开放。请使用管理员分配的账号登录。</p>
+
+      <form class="login-form" id="login-form" novalidate>
+        <label class="login-field">
+          <span>账号</span>
+          <input id="login-user" name="username" type="text" autocomplete="username"
+                 autocapitalize="off" autocorrect="off" spellcheck="false"
+                 required maxlength="64" placeholder="请输入账号">
+        </label>
+        <label class="login-field">
+          <span>密码</span>
+          <input id="login-pass" name="password" type="password" autocomplete="current-password"
+                 required maxlength="256" placeholder="请输入密码">
+        </label>
+        <p class="login-error" id="login-error" role="alert" aria-live="polite"></p>
+        <button class="login-submit" id="login-submit" type="submit">登录</button>
+      </form>
+
+      <p class="login-foot">连续失败会临时锁定，请稍后再试。</p>
+    </div>
+  </main>
+</body>
+</html>

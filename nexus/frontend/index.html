@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Nexus · AI 银行管家</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/rich-text.js" defer></script>
+  <script src="/static/ui.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#message">跳到对话输入</a>
+<div class="ocean" aria-hidden="true"><i></i><i></i><i></i><span></span></div>
+<header class="masthead">
+  <a class="brand" href="/" aria-label="Nexus 首页"><span class="brand-mark"><i></i><i></i></span><span class="brand-name">NEXUS</span><small>AI 银行管家</small></a>
+  <div class="header-tools"><span id="model-badge" class="model-badge"><i></i> 正在连接工具</span><span class="user-avatar">林</span><span class="user-copy"><b>林知夏</b><small>账户已登录</small></span><button id="logout" class="logout-button" type="button" hidden>退出</button></div>
+</header>
+<main class="app-shell">
+  <aside class="nav-rail" aria-label="账户速览">
+    <div class="rail-summary">
+      <div class="rail-card balance"><span class="rail-eyebrow">可用余额</span><strong id="nav-balance">—</strong><small>实时核验</small></div>
+      <div class="rail-card goal"><span class="rail-eyebrow">资金目标</span><progress id="rail-goal-bar" max="100" value="0"></progress><div class="rail-foot"><span id="nav-goal-values">读取中…</span><b id="nav-goal-percent">—</b></div><small>来自你的理财资料</small></div>
+      <div class="rail-card spend"><span class="rail-eyebrow">本月支出</span><strong id="nav-spend">—</strong><small id="nav-spend-count">正在分析账单…</small></div>
+      <div class="rail-card alert"><span class="rail-eyebrow"><i></i> 需关注消费</span><strong id="nav-alert-amount">—</strong><small id="nav-alert-merchant">正在核验…</small></div>
+      <div class="rail-card activity"><span class="rail-eyebrow">最近资金活动</span><ol id="rail-activity" class="rail-activity"><li class="muted">正在读取最近记录…</li></ol></div>
+    </div>
+  </aside>
+  <section class="conversation" aria-labelledby="greeting">
+    <div class="agent-hero"><div class="agent-presence" aria-hidden="true"><span class="orb-glow"></span><i class="orb-wave wave-a"></i><i class="orb-wave wave-b"></i><i class="orb-wave wave-c"></i><em></em></div><div class="hero-copy"><div class="hero-kicker"><span>NEXUS</span><i></i> AI BANKING</div><h1 id="greeting">账户里有什么、<br><em>该买什么、该付谁，我来说。</em></h1><p>余额、账单、理财、转账、外汇和用卡安全，我会直接给结论。涉及资金的操作，都由你点头之后才执行。</p><div class="agent-status"><i class="live-dot"></i><strong id="agent-state">正在启动</strong><span>已接入你的账户</span></div></div></div>
+    <section class="capability-board" aria-labelledby="capability-title">
+      <header><div><span>SERVICES</span><h2 id="capability-title">银行服务</h2></div><p>直接点，或者用一句话说</p></header>
+      <div id="capability-grid" class="capability-grid">
+        <button data-prompt="根据我的账户数据做一份个性化理财分析"><i>01</i><b>我的财务档案</b><span>收入、资产、负债与订阅</span></button>
+        <button data-prompt="查看我的账户"><i>02</i><b>账户总览</b><span>余额、卡片、订阅与流水</span></button>
+        <button data-prompt="分析我这个月的消费"><i>03</i><b>消费分析</b><span>分类、异常与趋势</span></button>
+        <button data-prompt="根据我的账户数据做一份个性化理财分析"><i>04</i><b>理财规划</b><span>现金流、期限与风险约束</span></button>
+        <button data-prompt="1000人民币能换多少美元"><i>05</i><b>外汇兑换</b><span>实时汇率与换算</span></button>
+        <button data-prompt="给张三转账100元"><i>06</i><b>转账汇款</b><span>核对后生成确认计划</span><em>需你确认</em></button>
+        <button data-prompt="每月5号给张三转账1000元备注房租"><i>07</i><b>定期转账</b><span>周期、收款人、金额与用途</span><em>需你确认</em></button>
+        <button data-prompt="查看我的卡片"><i>08</i><b>用卡服务</b><span>查看、锁定、解锁与挂失</span><em>需你确认</em></button>
+        <button data-prompt="查看我的订阅"><i>09</i><b>代扣管理</b><span>合同与扣款授权分别管理</span><em>需你确认</em></button>
+        <button data-prompt="识别周期扣费"><i>10</i><b>订阅识别</b><span>从账单中发现规律扣费</span></button>
+        <button data-prompt="对比理财产品"><i>11</i><b>理财持仓</b><span>对比、适配、申购与赎回</span><em>需你确认</em></button>
+        <button data-prompt="把尾号8826单笔限额调到3000元"><i>12</i><b>用卡安全</b><span>显示原值与新值再确认</span><em>需你确认</em></button>
+        <button data-prompt="中国最新 GDP 增速是多少"><i>13</i><b>宏观数据</b><span>世界银行官方年度指标</span></button>
+        <button data-prompt="苹果最新 SEC 财报"><i>14</i><b>公司研究</b><span>SEC 10-K、10-Q 与 8-K</span></button>
+        <button data-prompt="下周我要去上海出差三天，帮我把资金、交通、酒店、天气和卡片权益一起规划"><i>15</i><b>出行与生活</b><span>资金、交通、住宿与天气一起安排</span></button>
+        <button data-prompt="检查父亲账户最近是否有疑似诈骗的大额交易，并给出处理方案"><i>16</i><b>账户安全</b><span>事件识别、风险隔离与恢复建议</span></button>
+      </div>
+      <button id="capability-toggle" class="capability-toggle" type="button" aria-expanded="false" aria-controls="capability-grid">查看全部服务 ↓</button>
+    </section>
+    <div class="conversation-zone">
+      <div class="conversation-head"><div><span>CONVERSATION</span><h2>和 Nexus 说说</h2></div><div class="reading-controls"><button id="clear-conversation" type="button" title="清空当前对话显示，保留账户与长期记忆">清空对话</button><button id="report-view" type="button" aria-haspopup="dialog">展开阅读</button></div></div>
+      <div id="messages" class="messages" role="log" aria-live="polite" aria-label="对话记录"><article class="assistant-message welcome-message"><span class="agent-avatar">N</span><div><span class="speaker">NEXUS · AI 银行管家</span><p id="welcome-copy">正在接入你的账户…</p></div></article></div>
+      <div class="prompt-suggestions"><span>试试这些：</span><button data-prompt="把昨晚聚餐的钱转给李四">聚餐 AA</button><button data-prompt="下个月发工资那天给妈妈转2000元生活费，余额不足时先给方案">工资日转账</button><button data-prompt="分析我的深夜外卖和月底消费风险">消费干预</button><button data-prompt="下周我要去上海出差三天">差旅安排</button><button data-prompt="检查父亲账户是否有诈骗风险">家人账户安全</button></div>
+      <div class="composer-wrap"><p id="error" class="error" role="alert" hidden></p><form id="composer" class="composer"><span class="composer-tool" aria-hidden="true">N</span><label class="sr-only" for="message">告诉 Nexus 你的目标</label><input id="message" name="message" placeholder="例如：分析本月消费，或 1000 人民币能换多少美元" maxlength="500" autocomplete="off" required><button id="send" class="send" type="submit" aria-label="发送消息">↑</button></form><p id="model-note" class="composer-hint">Enter 发送 · 涉及资金的操作会先请你确认</p></div>
+    </div>
+  </section>
+  <aside class="context-panel" aria-label="工具与账户上下文">
+    <div class="context-head"><div><span>运行上下文</span><i class="live-dot"></i></div><button id="refresh" class="text-button" aria-label="刷新账户和记录">刷新 ↻</button></div>
+    <section class="tool-status-panel" aria-labelledby="tool-status-title"><div class="tool-title"><span>SERVICES</span><h2 id="tool-status-title">服务状态</h2></div><ul id="tool-status"><li><i></i><div><b>账户与账单</b><small>正在接入…</small></div></li><li><i></i><div><b>智能理解</b><small>正在接入…</small></div></li><li><i></i><div><b>汇率与市场数据</b><small>正在接入…</small></div></li></ul></section>
+    <details class="context-group" open><summary><span>我的卡片</span><small>CARDS</small></summary><div id="cards" class="card-list"><p class="muted">正在读取卡片…</p></div></details>
+    <details class="context-group"><summary><span>订阅与代扣</span><small>RECURRING</small></summary><div id="subscriptions" class="subscription-list"></div><p class="side-note">合同与代扣授权分别管理。</p></details>
+    <details class="context-group"><summary><span>定期转账</span><small>SCHEDULED</small></summary><div id="scheduled-transfers" class="subscription-list"><p class="muted">暂无计划</p></div><p class="side-note">计划经你确认后才会执行，随时可以暂停。</p></details>
+    <details class="context-group"><summary><span>AA 收款任务</span><small>COLLECTION</small></summary><div id="aa-collections" class="subscription-list"><p class="muted">暂无任务</p></div></details>
+    <details class="context-group"><summary><span>资金动态</span><small>LEDGER</small></summary><div id="transactions" class="transactions"><div class="empty-state"><span>↗</span><p>暂无新流水</p><small>完成转账后会显示在这里。</small></div></div></details>
+    <details class="context-group"><summary><span>操作记录</span><small>ACTIVITY</small></summary><ol id="audit" class="audit"></ol></details>
+    <details class="context-group"><summary><span>我的记忆与偏好</span><small>MEMORY</small></summary><div id="user-memory" class="subscription-list"><p class="muted">正在读取…</p></div><p class="side-note">近期对话保留 24 小时，达到长度阈值自动压缩。偏好不替代风险测评或操作授权。</p><button id="clear-memory" class="text-button" type="button">清除偏好与对话记忆</button></details>
+    <details class="context-group"><summary><span>授权与审计验证</span><small>VERIFY</small></summary><p id="audit-verification" class="side-note">可检查新操作的签名、关联业务记录与独立审计锚点。</p><button id="verify-audit" class="text-button" type="button">验证审计记录</button></details>
+  </aside>
+</main>
+<footer><span>NEXUS · AI 银行管家</span><span>账户数据实时同步 · 每一笔操作都可追溯</span></footer>
+</body>
+</html>

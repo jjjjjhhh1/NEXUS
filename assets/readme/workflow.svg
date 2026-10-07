@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc">
+  <title id="title">NEXUS 对话、确认与业务执行流程</title>
+  <desc id="desc">对话经过意图理解和业务规划，写操作通过确认和二次核验，业务服务将结果记录到 SQLite 和审计链。</desc>
+  <rect width="1200" height="440" rx="18" fill="#06111f"/>
+  <g font-family="Segoe UI, Microsoft YaHei, PingFang SC, sans-serif" fill="#edf7ff">
+    <text x="56" y="72" font-size="36" font-weight="700">NEXUS / 从对话到可核验的操作</text>
+    <text x="56" y="112" font-size="22" fill="#87a2b9">本地演示架构 · 模拟账户与交易</text>
+    <g fill="none" stroke="#35d8d0" stroke-width="3">
+      <path d="M280 220H324m256 0h44m256 0h44"/>
+      <path d="m314 212 10 8-10 8m300-16 10 8-10 8m300-16 10 8-10 8"/>
+    </g>
+    <rect x="56" y="164" width="224" height="112" rx="14" fill="#102e4b"/>
+    <rect x="324" y="164" width="256" height="112" rx="14" fill="#102e4b"/>
+    <rect x="624" y="164" width="256" height="112" rx="14" fill="#102e4b"/>
+    <rect x="924" y="164" width="220" height="112" rx="14" fill="#102e4b"/>
+    <g text-anchor="middle" font-size="28" font-weight="600">
+      <text x="168" y="212">用户对话</text><text x="452" y="212">理解与规划</text><text x="752" y="212">确认与核验</text><text x="1034" y="212">业务执行</text>
+    </g>
+    <g text-anchor="middle" font-size="20" fill="#87a2b9">
+      <text x="168" y="246">Web / FastAPI</text><text x="452" y="246">Agent / 模型或指令</text><text x="752" y="246">写操作的执行门槛</text><text x="1034" y="246">账户 / 支付 / 计划</text>
+    </g>
+    <path d="M1034 276v40H56" fill="none" stroke="#294866" stroke-width="2"/>
+    <circle cx="56" cy="316" r="5" fill="#35d8d0"/>
+    <text x="56" y="362" font-size="26" fill="#35d8d0">SQLite 演示数据 + HMAC 签名审计链</text>
+    <text x="56" y="400" font-size="20" fill="#87a2b9">查询直接读取数据；写入经过确认。流程示意，非真实银行连接。</text>
+  </g>
+</svg>
