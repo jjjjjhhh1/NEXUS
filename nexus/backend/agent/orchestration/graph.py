@@ -169,7 +169,7 @@ async def guard_node(state: BankingState) -> dict:
             return {"result": previous, "engine": "policy", "trace": previous.get("trace", [])}
         if refusal.startswith("收到") and re.search(r"比较|分析|查看|查询", state["message"]) and "理财" in state["message"] and re.search(r"消费|账单", state["message"]):
             # Honor the negated write and still complete the explicit read goal.
-            answer = await build_financial_analysis(session, who.user_id)
+            answer = await build_financial_analysis(session, who.user_id, state["message"], state.get("understanding"))
             from ..analysis.bill_analysis import build_bill_analysis
             if answer.get("type") == "financial_analysis":
                 answer["supporting_bill"] = await build_bill_analysis(session, who.user_id, "month")
@@ -294,6 +294,9 @@ async def router_node(state: BankingState) -> dict:
     prior = await _prior_slots(state)
 
     if not model.is_configured():
+        from ..planning.financial_orchestrator import fallback_plan
+        if fallback_plan(message):
+            return {"engine": READ_FINANCIAL, "route_reason":"无模型：只读显式目标测算，规则风控兜底", "understanding":None, "understanding_context":prior, "model_status":"not_configured"}
         decision = degraded_route(message)
         return {"engine": decision.branch, "route_reason": decision.reason,
                 "understanding": None, "understanding_context": prior,
@@ -338,6 +341,12 @@ async def router_node(state: BankingState) -> dict:
         if len(combined) >= 3 and any(word in message for word in ("综合", "结合", "同时", "并", "以及")):
             understanding.scene = "cross_scene"
             understanding.read_tools = list(dict.fromkeys(combined + understanding.read_tools))[:8]
+    from ..planning.financial_orchestrator import fallback_plan
+    if (understanding.financial_task or fallback_plan(message)) and not understanding.write_intent and understanding.scene != "attack":
+        understanding.scene = "financial_planning"
+        understanding.read_tools = ["account", "financial_profile", "products"]
+        if understanding.confidence < 0.8:
+            return {"engine": CLARIFY, "route_reason":"当前目标理解置信度不足，请确认金额、期限及净利润或储蓄口径", "understanding":understanding.model_dump(), "understanding_context":prior, "model_status":"ok"}
     if _answer_our_own_amount_question(understanding, prior, message):
         decision = route(understanding)
         return {
@@ -894,12 +903,13 @@ async def financial_node(state: BankingState) -> dict:
         previous = await replay(session, who, state["request_id"], digest)
         if previous:
             return {"result": previous, "engine": "analysis", "trace": previous.get("trace", [])}
-        answer = await build_financial_analysis(session, who.user_id)
+        answer = await build_financial_analysis(session, who.user_id, state["message"], state.get("understanding"))
         from ..analysis.scenarios import apply_income_scenario
-        answer = await apply_income_scenario(session, who.user_id, answer, message)
+        answer = await apply_income_scenario(session, who.user_id, answer, message) if not answer.get("orchestration") else answer
         if answer["type"] != "financial_intake":
             answer["trace"] = [
                 *understanding_trace(state),
+                *answer.get("trace", []),
                 {"label": "读取本地工具", "detail": "账户、订阅、持仓、目标与风险约束", "status": "done"},
                 {"label": "生成方案", "detail": "本地金额计算", "status": "done"},
             ]
@@ -954,8 +964,8 @@ async def tools_node(state: BankingState) -> dict:
             previous = await replay(session, who, state["request_id"], digest)
             if previous:
                 return {"result": previous, "engine": "analysis", "trace": previous.get("trace", [])}
-            answer = await build_financial_analysis(session, who.user_id)
-            answer = await apply_income_scenario(session, who.user_id, answer, message)
+            answer = await build_financial_analysis(session, who.user_id, state["message"], state.get("understanding"))
+            answer = await apply_income_scenario(session, who.user_id, answer, message) if not answer.get("orchestration") else answer
             if answer.get("scenario"):
                 from ..analysis.bill_analysis import build_bill_analysis
                 answer["supporting_bill"] = await build_bill_analysis(session, who.user_id, "month")

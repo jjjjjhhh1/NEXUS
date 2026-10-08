@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+from .financial_plan import FinancialTaskPlan
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +147,8 @@ class Understanding(BaseModel):
     """One model call produces the whole plan for one user turn."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
+
+    financial_task: FinancialTaskPlan | None = None
 
     scene: Scene = Field(description="这条消息属于哪个银行业务范畴")
 
@@ -295,6 +298,10 @@ UNDERSTAND_SYSTEM = """你是金融助手的意图理解层。用户用自然语
   不要因为出现 AA 就去澄清分摊人数。
 - ‘对比理财产品’‘申购’‘赎回’是 financial_profile；‘根据我的账户做理财分析/资产配置’是
   financial_planning（只读分析，不动钱）；‘分析本月账单/异常消费’是 bill_analysis。
+- 用户直接说‘帮我做资产配置’‘钱该怎么安排’‘为买车/教育/养老攒钱’也是 financial_planning，
+  不要求用户输入固定指令。整体配置先回答现金流、应急金、负债和可投资资金；已保存的目标只是
+  历史约束，不得把它当成本次用户新提出的目标。用户提出新用途、金额或期限时不能沿用旧目标。
+  工具返回的目标名称不代表用户本次确认了目标；缺失约束时请用户补充，不编造数字。
 - 问‘我的风险等级是多少’‘做个风险测评’‘我这种情况能买什么风险的产品’‘我承受得了多大波动’
   ‘C几’都是 risk_assessment —— 它是**填问卷得到等级**，不是推荐产品。推荐具体产品才是
   financial_profile。两者都只读，不会动钱。
@@ -398,6 +405,9 @@ UNDERSTAND_SYSTEM = """你是金融助手的意图理解层。用户用自然语
 - 需要给出结论和取舍 → analysis。
 - 需要调用多个工具交叉决策 → plan。
 
+理财复合任务：financial_task填当前objective、逐字evidence、amount、months、kind（profit纯利润/savings累计储蓄/allocation配置）、confidence和modules。
+modules只能选goal_calculation、financial_diagnosis、cashflow、risk_compliance、product_matching、original_goal_impact。
+当前显式目标覆盖旧资料目标。一个月靠理财赚100万：financial_planning，amount="1000000", months=1, kind="profit"，先测算风险，不直接推荐产品。金额或期限不明填null，不编造收益；互斥目标先追问。只读规划不能设置write_intent。
 confidence 表示你的判断把握；意图含糊、多义或需要澄清时必须低于 0.8。
 reasoning 写一句人话解释你的判断依据，会展示给用户。"""
 

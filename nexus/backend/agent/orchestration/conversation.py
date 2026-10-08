@@ -207,7 +207,9 @@ async def update_financial_profile(token: str | None, data: ProfileInput):
         who = await lookup_identity(session, token)
         await save_profile(session, who.user_id, data)
         report = await build_financial_analysis(session, who.user_id)
-    blackboard = report.pop("blackboard")
+    blackboard = report.pop("blackboard", None)
+    if blackboard is None or report.get("orchestration"):
+        return report
     try:
         narrative = await model.personalize_financial_plan(blackboard)
         report["narrative"] = narrative.model_dump()

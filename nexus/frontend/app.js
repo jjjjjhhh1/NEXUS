@@ -95,7 +95,7 @@ const RECURRENCE_LABELS=[['once','仅此一次'],['weekly','每周'],['monthly',
 // 确认卡在钱动之前必须是可以改的表。日期被读错、金额多打一个零，客户在
 // 确认卡上改掉，比事后申诉便宜一百倍。收款人不给改——那是从原话核出来的，
 // 改收款人等于把「我确认」变成「我确认了另一笔」。
-function actionEditor(answer, onSaved) {
+function actionEditor(answer, onSaved, onCancel) {
   const terms = answer.terms || {};
   const fields = answer.editable || [];
   const form = node('form','action-edit');
@@ -107,7 +107,7 @@ function actionEditor(answer, onSaved) {
   };
   const amount = node('input','action-edit-input');
   amount.type = 'text'; amount.inputMode = 'decimal';
-  amount.value = money(terms.amount || '');
+  amount.value = String(terms.amount ?? '');
   amount.dataset.editField = 'amount';
   row('金额', amount, '可改成你能承受的数；差额我会在确认前再核一次');
 
@@ -117,6 +117,7 @@ function actionEditor(answer, onSaved) {
   purpose.dataset.editField = 'purpose';
   row('用途', purpose, '会打印在回执上');
 
+  let cadence, times;
   if (fields.includes('run_date')) {
     const date = node('input','action-edit-input');
     date.type = 'date';
@@ -124,14 +125,14 @@ function actionEditor(answer, onSaved) {
     date.dataset.editField = 'run_date';
     row('执行日期', date, '这一笔什么时候扣');
 
-    const cadence = node('select','action-edit-input');
+    cadence = node('select','action-edit-input');
     RECURRENCE_LABELS.forEach(([value,label])=>{
       const option = node('option','',label); option.value = value;
       if ((terms.frequency || 'once').toLowerCase() === value) option.selected = true;
       cadence.append(option);
     });
     cadence.dataset.editField = 'recurrence';
-    const times = node('input','action-edit-input action-edit-narrow');
+    times = node('input','action-edit-input action-edit-narrow');
     times.type = 'number'; times.min = '1'; times.max = '60';
     times.placeholder = '长期';
     if (terms.occurrences) times.value = String(terms.occurrences);
@@ -164,7 +165,10 @@ function actionEditor(answer, onSaved) {
       error.textContent = problem.message;
     } finally { setBusy(false); }
   }, 'primary');
-  actions.append(save, button('不改了', () => form.closest('.action-edit-wrap')?.remove()));
+  actions.append(save, button('不改了', () => {
+    form.closest('.action-edit-wrap')?.remove();
+    if (onCancel) onCancel();
+  }));
   form.append(error, actions);
   const wrap = node('div','action-edit-wrap');
   wrap.append(form);
@@ -177,7 +181,17 @@ function moneyFieldList(answer) {
   return list;
 }
 const busyButtons=new Map();
-function setBusy(value) { busy=value; if(value){document.querySelectorAll('button').forEach(b=>{busyButtons.set(b,b.disabled);b.disabled=true;});}else{busyButtons.forEach((disabled,b)=>{if(b.isConnected)b.disabled=disabled;});busyButtons.clear();} }
+function setBusy(value) {
+  if (busy === value) return;
+  busy=value;
+  if(value){document.querySelectorAll('button').forEach(b=>{busyButtons.set(b,b.disabled);b.disabled=true;});}
+  else{busyButtons.forEach((disabled,b)=>{if(b.isConnected)b.disabled=disabled;});busyButtons.clear();}
+}
+async function refreshAfterResult() {
+  try { await refresh(); }
+  catch(error) { showError('操作结果已收到，但账户信息刷新失败。请刷新页面核对状态，无需重复提交。'); }
+}
+
 function showError(message) { $('error').textContent = message; $('error').hidden = !message; }
 // 倒计时挂在确认卡上，而不是写一句"5 分钟内有效"。写操作有真实的时间窗，
 // 看不见的窗口只会让人在过期后才发现自己白等。
@@ -197,6 +211,7 @@ function countdownBar(onExpire, expiresAt) {
   track.append(fill); wrap.append(track, text);
   const started = Date.now();
   const timer = setInterval(() => {
+    if (!wrap.isConnected) { clearInterval(timer); return; }
     const left = Math.max(0, total - Math.floor((Date.now()-started)/1000));
     fill.style.width = `${(left/total)*100}%`;
     text.textContent = left > 0 ? `剩余 ${Math.floor(left/60)} 分 ${left%60} 秒 · 过期后需重新发起` : '已过期，请重新发起这笔操作';
@@ -209,7 +224,7 @@ function failureCard(message, onRetry) {
   // 失败不该只留一行红字。给出发生了什么、钱有没有动、以及下一步。
   const block = node('article','failure-card');
   block.append(node('span','speaker','NEXUS · 请求未完成'), node('h3','',message));
-  block.append(node('p','failure-body','这次请求没有完成。没有创建任何操作，也没有移动任何资金。'));
+  block.append(node('p','failure-body','暂时无法确认本次请求的最终结果，请先核对操作记录。重试会沿用原请求编号。'));
   if (onRetry) {
     block.append(button('重试一次', onRetry, 'primary'), button('换个问法', () => { showError(''); $('message').focus(); }));
   } else {
@@ -617,7 +632,7 @@ function renderBirthdayIntake(answer) {
   const block=node('article','analysis-card birthday-card');block.append(agentAvatar(),node('span','speaker','NEXUS / CROSS-SCENE PLANNER'),node('h3','',answer.title),node('p','analysis-summary',answer.message));
   const form=node('form','birthday-form'),dateInput=node('input'),budget=node('input');dateInput.type='date';dateInput.min=answer.min_date;dateInput.required=true;budget.type='number';budget.min='1';budget.step='0.01';budget.value=answer.budget;budget.required=true;
   const dateLabel=node('label');dateLabel.append(node('span','','生日日期'),dateInput);const budgetLabel=node('label');budgetLabel.append(node('span','','预算金额'),budget);const submit=node('button','primary','继续生成跨场景计划');submit.type='submit';form.append(dateLabel,budgetLabel,submit);
-  form.addEventListener('submit',event=>{event.preventDefault();send(`请规划生日惊喜：生日日期${dateInput.value}，预算${budget.value}元`);block.remove();});block.append(form);return block;
+  form.addEventListener('submit',async event=>{event.preventDefault();if(busy)return; if(await send(`请规划生日惊喜：生日日期${dateInput.value}，预算${budget.value}元`))block.remove();});block.append(form);return block;
 }
 function renderCrossScenePlan(answer) {
   const block=node('article','analysis-card cross-scene-card');const head=node('div','analysis-head'),title=node('div');title.append(node('span','speaker','NEXUS / MULTI-TOOL PLAN'),node('h3','',answer.title));head.append(title,node('span','analysis-date',`生日 ${answer.event_date}`));block.append(agentAvatar(),head);
@@ -744,7 +759,7 @@ function renderFinancialIntake(answer) {
     data.seasonal_monthly_expenses=[...form.querySelectorAll('[data-month-expense]')].map(input=>input.value);
     data.declared_subscriptions=[...form.querySelectorAll('.subscription-input-row')].map(row=>({merchant_name:row.querySelector('[data-sub-merchant]').value,amount:row.querySelector('[data-sub-amount]').value,period:row.querySelector('[data-sub-period]').value,next_charge_day:Number(row.querySelector('[data-sub-day]').value),essential:row.querySelector('[data-sub-essential]').checked}));
     // 保存资料会改掉侧栏依赖的目标进度和现金流，方案重算的同时侧栏也要跟着重取。
-    try { const result=await api('/financial-profile',data); hideThinkingBubble(); renderAnswer(result); block.remove(); setAgentState('方案已生成'); await refresh(); }
+    try { const result=await api('/financial-profile',data); hideThinkingBubble(); renderAnswer(result); block.remove(); setAgentState('方案已生成'); await refreshAfterResult(); }
     catch(error){showError(error.message); hideThinkingBubble();} finally {setBusy(false);}
   });
   block.append(form);
@@ -755,6 +770,20 @@ function renderAnalysis(answer) {
   const head=node('div','analysis-head');
   const title=node('div'); title.append(node('span','speaker','NEXUS / PERSONAL PLAN'),node('h3','',answer.title));
   head.append(title,node('span','analysis-date',`数据截至 ${answer.as_of}`)); block.append(agentAvatar(),head);
+  if (answer.orchestration) {
+    block.append(node('p','advice-verdict',answer.summary));
+    const basis=analysisSection('测算依据');
+    const grid=node('div','finance-grid');
+    (answer.metrics||[]).forEach(item=>{const cell=node('div','finance-stat');cell.append(node('small','',item.label),node('strong','',item.value),node('p','chart-note',item.basis));grid.append(cell);});
+    basis.append(grid); block.append(basis);
+    const alternatives=analysisSection('可调整的方向');
+    const steps=node('ol','advice-actions');
+    (answer.recommendation.actions||[]).forEach(item=>steps.append(node('li','',item)));
+    alternatives.append(steps); block.append(alternatives);
+    const impact=analysisSection('原目标如何处理');
+    impact.append(node('p','',answer.follow_up)); block.append(impact);
+    return block;
+  }
   if(answer.scenario&&answer.summary){block.append(node('p','advice-verdict',answer.summary));const grid=node('div','finance-grid');(answer.metrics||[]).forEach(item=>{const cell=node('div','finance-stat');cell.append(node('small','',item.label),node('strong','',item.value));grid.append(cell);});block.append(grid);}
   const badges=node('div','analysis-badges');
   badges.append(node('span','',`${answer.profile.risk_score} · ${answer.profile.style}`),node('span','',`数据质量：${answer.profile.data_quality}`)); block.append(badges);
@@ -938,21 +967,6 @@ function humanise(text) {
     return BLOCK_WORDS[key] || word;
   });
 }
-// 排版理由随答案一起显示。它是这个回答"为什么长这样"的唯一解释。
-// 一句话的答复没有"排版"可言——在那里显示排版决策只是噪音。
-const LAYOUT_EXPLAINED = new Set([
-  'account_snapshot','bill_analysis','risk_report','recurring_detection',
-  'product_catalog','risk_intake','agent_response',
-]);
-function layoutNote(answer) {
-  const plan = answer.presentation || {};
-  if (!plan.rationale || !LAYOUT_EXPLAINED.has(answer.type)) return null;
-  const note = node('p', 'layout-note');
-  note.append(node('span', 'layout-note-tag', plan.source === 'model' ? 'AI 排版' : '默认排版'),
-    node('span', '', humanise(plan.rationale)));
-  if (plan.emphasis) note.append(node('em', '', `重点：${humanise(plan.emphasis)}`));
-  return note;
-}
 function renderBillAnalysis(answer) {
   const block=node('article','analysis-card bill-card');
   block.append(agentAvatar());
@@ -1088,6 +1102,7 @@ function renderStepUp(answer) {
   }
   form.addEventListener('submit',async event=>{
     event.preventDefault();
+    if (busy || form.inert) return;
     const body={echoes:{},passcode:null};
     (challenge.fields||[]).forEach(field=>{const input=form.querySelector(`[data-step-field="${field.name}"]`);if(input)body.echoes[field.name]=input.value;});
     const code=form.querySelector('[data-step-field="passcode"]');
@@ -1097,7 +1112,7 @@ function renderStepUp(answer) {
     // 核验通过后钱才真的动。侧栏那五块（订阅、定时转账、AA 收款、流水、审计）
     // 必须在这里重取，否则计划已经在库里、卡片还停在执行前的样子——用户会以为
     // 没生效，甚至重复点一次。
-    try{ renderAnswer(await api(`/actions/${answer.action_id}/step-up`,body,'POST')); setAgentState('已执行'); await refresh(); }
+    try{ const result=await api(`/actions/${answer.action_id}/step-up`,body,'POST'); renderAnswer(result); setAgentState(result.type==='receipt'?'已执行':'核验结果已更新'); await refreshAfterResult(); }
     catch(problem){ showStepUpProblem(problem); } finally{setBusy(false);}
   });
 
@@ -1119,7 +1134,8 @@ function renderStepUp(answer) {
     if ((answer.editable || []).length) {
       actionsRow.append(button('改金额后重试', () => {
         problem.replaceChildren();
-        const editor = actionEditor(answer, (updated) => { renderAnswer(updated); setAgentState('已更新 · 请重新确认'); });
+        form.inert = true;
+        const editor = actionEditor(answer, (updated) => { renderAnswer(updated, {force:true}); setAgentState('已更新 · 请重新确认'); }, () => { form.inert = false; });
         block.insertBefore(editor, form);
       }, 'primary'));
     }
@@ -1127,7 +1143,7 @@ function renderStepUp(answer) {
       setBusy(true);
       try {
         renderAnswer(await api(`/actions/${answer.action_id}/cancel`, {}, 'POST'));
-        setAgentState('已取消 · 钱没有动'); await refresh();
+        setAgentState('已取消 · 钱没有动'); await refreshAfterResult();
       } catch(failure2){ showStepUpProblem(failure2); } finally{ setBusy(false); }
     }));
     problem.append(actionsRow);
@@ -1144,7 +1160,7 @@ function renderStepUp(answer) {
     // 当成 GET，于是取消按钮打在一个只接受 POST 的路由上：405、一行滚出屏幕的
     // 红字，客户唯一能真正取消的地方是更早那张确认卡——两张卡讲同一笔钱，
     // 却只有一个是活的。
-    try{ renderAnswer(await api(`/actions/${answer.action_id}/cancel`,{},'POST')); setAgentState('已取消 · 钱没有动'); await refresh(); }
+    try{ renderAnswer(await api(`/actions/${answer.action_id}/cancel`,{},'POST')); setAgentState('已取消 · 钱没有动'); await refreshAfterResult(); }
     catch(error){ showStepUpProblem(error); } finally{setBusy(false);}
   },''));
   form.append(actions);
@@ -1165,15 +1181,17 @@ function passcodeSetup(challenge) {
   form.append(input);
   wrap.append(node('span','step-up-setup-label','首次使用或需要更换？'),form);
   async function save(){
-    if(busy) return;
+    if(busy || !input.reportValidity()) return;
     setBusy(true); showError('');
     try{
       await api('/step-up/passcode',{passcode:input.value});
+      demoPasscode = '';
+      document.querySelectorAll('.step-up-demo-code').forEach(note=>note.remove());
       input.value='';
       wrap.replaceChildren(node('span','step-up-setup-ok','验证密码已在本机生效，请在上方输入它完成核验。'));
     }catch(error){showError(error.message);} finally{setBusy(false);}
   }
-  form.addEventListener('submit',event=>{event.preventDefault(); save();});
+  form.addEventListener('submit',event=>{event.preventDefault(); event.stopPropagation(); save();});
   form.append(button('设置验证密码',()=>save(),'ghost'));
   return wrap;
 }
@@ -1216,11 +1234,12 @@ function renderRiskIntake(answer) {
   });
   form.addEventListener('submit',async event=>{
     event.preventDefault();
+    if (busy) return;
     const payload={};
     answer.questions.forEach(q=>{const checked=form.querySelector(`input[name="${q.name}"]:checked`);if(checked)payload[q.name]=checked.value;});
     setBusy(true);
     // 测评等级会改变产品匹配和可投额度，侧栏的账户摘要同源，一并重取。
-    try{ renderAnswer(await api('/risk-assessment',payload)); block.remove(); setAgentState('测评完成'); await refresh(); }
+    try{ renderAnswer(await api('/risk-assessment',payload)); block.remove(); setAgentState('测评完成'); await refreshAfterResult(); }
     catch(error){showError(error.message);} finally{setBusy(false);}
   });
   const actions=node('div','plan-actions');
@@ -1300,19 +1319,19 @@ function emit(answer, block, opts) {
     const content = block.querySelector('.agent-response-content');
     (content || block).append(footer);
   }
-  if (opts.old) opts.old.replaceWith(block); else $('messages').append(block);
+  if (opts.old) { opts.old.stopCountdown?.(); opts.old.replaceWith(block); } else $('messages').append(block);
   if (answer.action_id) { seenActions.set(answer.action_id, block); actionVersions.set(answer.action_id, JSON.stringify(answer)); }
   const viewport=$('messages');
   viewport.scrollTop+=block.getBoundingClientRect().top-viewport.getBoundingClientRect().top-16;
   return block;
 }
-function renderAnswer(answer) {
+function renderAnswer(answer, {force = false} = {}) {
   if(answer.action_id && clearedActionIds.has(answer.action_id))return;
   const version = JSON.stringify(answer);
   // The dedupe has to run BEFORE the step-up render. Clicking 确认执行 asks the
   // server for the same action again, so without this every click appended
   // another identical 核验 card and the user chased a stack of them.
-  if (answer.action_id && actionVersions.get(answer.action_id) === version) return;
+  if (!force && answer.action_id && actionVersions.get(answer.action_id) === version) return;
   // Resolved before any branch, because the step-up render replaces the block
   // it is superseding rather than appending a second one.
   const old = answer.action_id && seenActions.get(answer.action_id);
@@ -1408,7 +1427,7 @@ function renderAnswer(answer) {
     const ttl = countdownBar(() => {
       // 过期后按钮留着但不可点：让客户看到"我刚才那笔要重来"，
       // 而不是对着一个点了没反应的按钮猜原因。
-      actions.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      actions.querySelectorAll('button').forEach(b => { b.disabled = true; if (busyButtons.has(b)) busyButtons.set(b, true); });
       const editToggle = block.querySelector('[data-act="edit"]');
       if (editToggle) editToggle.disabled = true;
       setAgentState('确认已过期 · 未执行');
@@ -1417,31 +1436,38 @@ function renderAnswer(answer) {
         block.append(node('p','expired-note','这笔没有执行，钱没有动。修正信息后可以重新发起。'));
       }
     }, answer.expires_at);
+    block.stopCountdown = ttl.stop;
     block.append(ttl.wrap);
     const decide = async (decision) => {
       if (busy) return;
       setBusy(true); showError(''); setAgentState(decision==='confirm'?'正在执行并记录':'正在取消计划','executing');
       try {
         const result = await api(`/actions/${answer.action_id}/${decision}`, {}, 'POST');
-        ttl.stop();
         renderAnswer(result);
-        setAgentState(decision==='confirm'?'执行完成':'计划已取消');
-        await refresh();
+        setAgentState(decision==='cancel'?'计划已取消':result.type==='step_up'?'等待二次核验':result.type==='receipt'?'执行完成':'操作状态已更新');
+        await refreshAfterResult();
       } catch(error) {showError(error.message);setAgentState('执行失败');}
       finally {setBusy(false);}
     };
     const canEdit = (answer.editable || []).length > 0;
     if (canEdit) {
       const toggle = button('修改这笔', () => {
+        const closeEditor = () => {
+          block.querySelector('.action-edit-wrap')?.remove();
+          toggle.textContent = '修改这笔';
+          const expired = block.querySelector('.expired-note') ||
+            (answer.expires_at && new Date(answer.expires_at).getTime() <= Date.now());
+          actions.querySelectorAll('button').forEach(b => { b.disabled = !!expired; });
+        };
         const existing = block.querySelector('.action-edit-wrap');
-        if (existing) { existing.remove(); toggle.textContent = '修改这笔'; return; }
-        // 编辑和确认/取消互斥：两个按钮同时可点，等于给了一个"边改边确认"的口子。
-        actions.querySelectorAll('button').forEach(b => { b.disabled = true; });
-        ttl.stop();
+        if (existing) { closeEditor(); return; }
+        // Keep the close toggle usable, and let the original expiry keep counting.
+        actions.querySelectorAll('button').forEach(b => { b.disabled = b !== toggle; });
         const editor = actionEditor(answer, (updated) => {
-          renderAnswer(updated);
+          ttl.stop();
+          renderAnswer(updated, {force:true});
           setAgentState('已按你的修改更新 · 等你确认');
-        });
+        }, closeEditor);
         block.insertBefore(editor, actions);
         toggle.textContent = '收起修改';
       });
@@ -1460,15 +1486,7 @@ function renderAnswer(answer) {
     messageContent.append(node('span','speaker','NEXUS · AI 银行管家'),node('p','',answer.message));
     block.append(node('span','agent-avatar','N'),messageContent);
   }
-  // 拒绝类回答的正文已经说清了"为什么不行"，再补一个安全检查标签只是复述。
-  // 其余场景的标签仍然如实标注实际发生的处理——确认卡、拦截、模型降级都需要。
-  const quiet = QUIET_REFUSALS.has(answer.category) || (answer.type === 'message' && answer.engine === 'policy');
-  if (answer.engine && !quiet) {
-    // clarify 的标签只说"确实还差东西"，不替任何核验背书。说"已核验你给的信息"
-    // 等于在还没确认缺什么之前先宣称核过了；一旦这张卡问错，标签会把错话坐实。
-    const labels = {memory:'明确偏好 · 可以查看、更正和清除', model:'当前模型 理解 · 后端校验', rules:'明确指令 · 本地工具', policy:'服务范围与安全检查', write:'已核验收款人 · 金额 · 限额 · 等你确认', clarify:'还差一点信息 · 我没有替你猜', 'external-tool':'公开外部数据 · 本地换算', compliance:'未通过发送前合规检查 · 已拦截', fallback:'模型暂不可用 · 未创建操作'};
-    (messageContent||block).append(node('p','demo-note',labels[answer.engine] || '后端校验'));
-  }
+  // Internal engine and validation metadata stay in the API and logs.
   return emit(answer, block, {old});
 }
 async function send(text) {
@@ -1484,7 +1502,8 @@ async function send(text) {
   showThinkingBubble();
   try {
     const answer=await api('/messages',payload);
-    retryMessage=null; hideThinkingBubble(); renderAnswer(answer); setAgentState(answer.type==='confirmation'?'等待你的确认':'准备就绪',answer.type==='confirmation'?'confirm':'ready'); await refresh();
+    retryMessage=null; hideThinkingBubble(); renderAnswer(answer); setAgentState(answer.type==='confirmation'?'等待你的确认':'准备就绪',answer.type==='confirmation'?'confirm':'ready'); await refreshAfterResult();
+    return true;
   } catch(error) {
     // Retry reuses the same request_id, so a network failure can never turn
     // into a second plan. What the customer needs to hear is that nothing
@@ -1496,6 +1515,10 @@ async function send(text) {
     showError(error.message);
   }
   finally {setBusy(false); $('message').focus(); if(document.body.classList.contains('agent-thinking')) setAgentState('需要你重试');}
+}
+function scheduleLabel(item) {
+  const frequency=(item.frequency||'MONTHLY').toLowerCase();
+  return ({once:'仅此一次',weekly:'每周',quarterly:'每季度',yearly:'每年'})[frequency] || `每月${item.day_of_month}日`;
 }
 function renderOverview(data) {
   const totalAvailable = data.accounts.reduce((sum,a)=>sum+Number(a.available),0);
@@ -1537,15 +1560,15 @@ function renderOverview(data) {
   if (scheduleList) {
     scheduleList.replaceChildren();
     if (!data.scheduled_transfers.length) scheduleList.append(node('p','muted','暂无定时转账计划。'));
-    data.scheduled_transfers.forEach(item=>{const row=node('article','subscription schedule-mini');const top=node('div','sub-top');top.append(node('span','sub-icon','↻'),node('span','sub-name',`${item.recipient} · 每月${item.day_of_month}日`),node('span','sub-price',`¥${money(item.amount)}`));row.append(top,node('p','sub-state',`${states[item.status]||item.status} · ${item.purpose} · 下次 ${item.next_run_at.slice(0,10)}`));if(item.status==='ACTIVE'){const controls=node('div','mini-actions');controls.append(button('暂停计划',async()=>{setBusy(true);showError('');try{await api(`/scheduled-transfers/${item.id}/pause`,{});await refresh();}catch(error){showError(error.message);}finally{setBusy(false);}},'action-warning'));row.append(controls);}scheduleList.append(row);});
+    data.scheduled_transfers.forEach(item=>{const row=node('article','subscription schedule-mini');const top=node('div','sub-top');top.append(node('span','sub-icon','↻'),node('span','sub-name',`${item.recipient} · ${scheduleLabel(item)}`),node('span','sub-price',`¥${money(item.amount)}`));row.append(top,node('p','sub-state',`${states[item.status]||item.status} · ${item.purpose} · 下次 ${item.next_run_at.slice(0,10)}`));if(item.status==='ACTIVE'){const controls=node('div','mini-actions');controls.append(button('暂停计划',async()=>{setBusy(true);showError('');try{await api(`/scheduled-transfers/${item.id}/pause`,{});await refreshAfterResult();}catch(error){showError(error.message);}finally{setBusy(false);}},'action-warning'));row.append(controls);}scheduleList.append(row);});
   }
   const aaList=$('aa-collections');
   if (aaList) {
     aaList.replaceChildren();if(!data.aa_collections.length)aaList.append(node('p','muted','暂无 AA 收款任务。'));
     data.aa_collections.forEach(item=>{const row=node('article','subscription');const top=node('div','sub-top');top.append(node('span','sub-icon','A'),node('span','sub-name',`AA #${item.id}`),node('span','sub-price',`¥${money(item.total)}`));row.append(top,node('p','sub-state',`${item.purpose} · ${item.participant_count} 人 · 每人 ¥${money(item.per_person)}`));aaList.append(row);});
   }
+  $('transactions').replaceChildren();
   if (data.transactions.length) {
-    $('transactions').replaceChildren();
     for (const t of data.transactions) {
       const item=node('div','transaction'),top=node('div','transaction-top');
       top.append(node('span','',`转账 #${t.id}`),node('strong','',`${t.status==='REVERSED'?'↩':t.direction==='out'?'−':'+'} ${money(t.amount)}`));
@@ -1645,7 +1668,7 @@ async function refresh() {
   if(warnings.length)showError(warnings.join('；')+'。其他账户功能可继续使用。');
   return warnings;
 }
-$('clear-memory').addEventListener('click',async()=>{if(busy)return;try{await api('/memory/reset',{});await refresh();}catch(error){showError(error.message);}});
+$('clear-memory').addEventListener('click',async()=>{if(busy)return;try{await api('/memory/reset',{});await refreshAfterResult();}catch(error){showError(error.message);}});
 $('verify-audit').addEventListener('click',async()=>{if(busy)return;try{const result=await api('/audit/verify');$('audit-verification').textContent=result.ok?`验证通过：${result.checked} 条记录；独立锚点覆盖至 ${result.anchored_sequence||0}。`:`验证未通过（${result.status}），请检查记录与独立锚点。`;}catch(error){showError(error.message);}});
 $('composer').addEventListener('submit',e=>{e.preventDefault();send($('message').value);});
 $('clear-conversation').addEventListener('click',()=>{

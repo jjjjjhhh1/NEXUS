@@ -79,6 +79,7 @@ def set_passcode(state: StepUpState, passcode: str) -> None:
     if not passcode.isdigit() or len(passcode) != PASSCODE_LENGTH:
         raise ValueError(f"验证密码需为 {PASSCODE_LENGTH} 位数字")
     state.passcode_digest = _digest(passcode)
+    state.demo_passcode = None
     state.attempts = 0
     state.locked = False
 

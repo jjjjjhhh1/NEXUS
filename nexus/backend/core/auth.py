@@ -148,7 +148,7 @@ class LoginGuard:
     def lockout_seconds(self, key: str) -> int:
         if time.monotonic() >= self.locked_until.get(key, 0.0):
             return 0
-        return int(self.locked_until[key] - time.monotonic()) + 1
+        return min(LOCK_MAX_SECONDS, int(self.locked_until[key] - time.monotonic()) + 1)
 
     def _record(self, bucket: dict[str, list[float]], key: str) -> int:
         now = time.monotonic()

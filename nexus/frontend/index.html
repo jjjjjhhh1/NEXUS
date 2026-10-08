@@ -35,7 +35,7 @@
         <button data-prompt="根据我的账户数据做一份个性化理财分析"><i>01</i><b>我的财务档案</b><span>收入、资产、负债与订阅</span></button>
         <button data-prompt="查看我的账户"><i>02</i><b>账户总览</b><span>余额、卡片、订阅与流水</span></button>
         <button data-prompt="分析我这个月的消费"><i>03</i><b>消费分析</b><span>分类、异常与趋势</span></button>
-        <button data-prompt="根据我的账户数据做一份个性化理财分析"><i>04</i><b>理财规划</b><span>现金流、期限与风险约束</span></button>
+        <button data-prompt="根据我的账户数据做一份个性化理财分析"><i>04</i><b>资产配置</b><span>说出需求，Agent 分析并规划</span></button>
         <button data-prompt="1000人民币能换多少美元"><i>05</i><b>外汇兑换</b><span>实时汇率与换算</span></button>
         <button data-prompt="给张三转账100元"><i>06</i><b>转账汇款</b><span>核对后生成确认计划</span><em>需你确认</em></button>
         <button data-prompt="每月5号给张三转账1000元备注房租"><i>07</i><b>定期转账</b><span>周期、收款人、金额与用途</span><em>需你确认</em></button>
@@ -55,7 +55,7 @@
       <div class="conversation-head"><div><span>CONVERSATION</span><h2>和 Nexus 说说</h2></div><div class="reading-controls"><button id="clear-conversation" type="button" title="清空当前对话显示，保留账户与长期记忆">清空对话</button><button id="report-view" type="button" aria-haspopup="dialog">展开阅读</button></div></div>
       <div id="messages" class="messages" role="log" aria-live="polite" aria-label="对话记录"><article class="assistant-message welcome-message"><span class="agent-avatar">N</span><div><span class="speaker">NEXUS · AI 银行管家</span><p id="welcome-copy">正在接入你的账户…</p></div></article></div>
       <div class="prompt-suggestions"><span>试试这些：</span><button data-prompt="把昨晚聚餐的钱转给李四">聚餐 AA</button><button data-prompt="下个月发工资那天给妈妈转2000元生活费，余额不足时先给方案">工资日转账</button><button data-prompt="分析我的深夜外卖和月底消费风险">消费干预</button><button data-prompt="下周我要去上海出差三天">差旅安排</button><button data-prompt="检查父亲账户是否有诈骗风险">家人账户安全</button></div>
-      <div class="composer-wrap"><p id="error" class="error" role="alert" hidden></p><form id="composer" class="composer"><span class="composer-tool" aria-hidden="true">N</span><label class="sr-only" for="message">告诉 Nexus 你的目标</label><input id="message" name="message" placeholder="例如：分析本月消费，或 1000 人民币能换多少美元" maxlength="500" autocomplete="off" required><button id="send" class="send" type="submit" aria-label="发送消息">↑</button></form><p id="model-note" class="composer-hint">Enter 发送 · 涉及资金的操作会先请你确认</p></div>
+      <div class="composer-wrap"><p id="error" class="error" role="alert" hidden></p><form id="composer" class="composer"><span class="composer-tool" aria-hidden="true">N</span><label class="sr-only" for="message">告诉 Nexus 你的目标</label><input id="message" name="message" placeholder="直接说出需求，例如：帮我做资产配置，或为买车制定储蓄计划" maxlength="500" autocomplete="off" required><button id="send" class="send" type="submit" aria-label="发送消息">↑</button></form><p id="model-note" class="composer-hint">Enter 发送 · 涉及资金的操作会先请你确认</p></div>
     </div>
   </section>
   <aside class="context-panel" aria-label="工具与账户上下文">

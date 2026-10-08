@@ -330,7 +330,74 @@ def build_recommendation(*, investable: Decimal, matched: list, rejected: list, 
     }
 
 
-async def build_financial_analysis(session, user_id: int) -> dict:
+def planning_focus(message: str, saved_goal: str) -> str:
+    """Do not silently substitute the saved goal for a conversational request."""
+    if not message.strip():
+        return "saved_goal"
+    if re.search(r"不.*(?:购房|买房|首付)|不.*(?:原来|之前|旧).*目标", message):
+        return "allocation"
+    goals = ("购房", "买房", "首付", "购车", "买车", "教育", "留学", "养老", "退休", "旅游", "旅行", "创业", "装修", "婚礼")
+    requested = [word for word in goals if word in message]
+    if requested:
+        housing = {"购房", "买房", "首付"}
+        same = all(word in saved_goal or (word in housing and any(w in saved_goal for w in housing)) for word in requested)
+        changed = bool(re.search(r"改|换|重新|不再|[0-9一二三四五六七八九十两]+\s*(?:万|元|年|个月)", message))
+        return "saved_goal" if same and not changed else "new_goal"
+    if re.search(r"新目标|换个目标|改.*目标|为.*(?:攒|存)|攒.*(?:万|元)|存.*(?:万|元)", message):
+        return "new_goal"
+    return "saved_goal" if re.search(r"目标|原来|之前|首要", message) else "allocation"
+
+
+async def build_financial_analysis(session, user_id: int, message: str = "", understanding: dict | None = None) -> dict:
+    profile = await get_profile(session, user_id)
+    from ..planning.financial_orchestrator import resolve_plan, aggregate
+    proposed = (understanding or {}).get("financial_task")
+    plan = resolve_plan(message or (profile.goal_name if profile else ""), proposed)
+    if (proposed and plan is None) or (plan and plan.confidence < 0.8):
+        return {"type":"message", "title":"先确认本次目标", "message":"当前目标的金额、期限或理解置信度不足。请确认净利润或累计储蓄、金额和期限；不会沿用旧目标。", "needs_input":True, "engine":"composite-analysis"}
+    if plan and plan.amount and plan.months:
+        baseline = await _build_financial_analysis(session, user_id)
+        if baseline.get("type") != "financial_analysis":
+            baseline["message"] = "已识别当前目标；请补充本金、收支和风险资料后测算，不先推荐产品。"
+            return baseline
+        return aggregate(plan, baseline, profile.goal_name if profile else "", message)
+    if plan:
+        return {"type":"message", "title":"补充当前目标的约束", "message":"请确认当前目标金额、期限和净利润或累计储蓄口径；旧目标不会替代本次目标。", "needs_input":True, "engine":"composite-analysis"}
+    from .scenarios import scenario_parameters
+    income_drop, savings_target = scenario_parameters(message)
+    if income_drop is not None and savings_target is not None:
+        return await _build_financial_analysis(session, user_id)
+    focus = planning_focus(message, profile.goal_name if profile else "")
+    if focus == "new_goal":
+        answer = intake(profile, await get_snapshot(session, user_id), await get_declared_subscriptions(session, user_id))
+        for field in ("goal_name", "goal_amount", "goal_saved", "horizon_months"):
+            answer["values"].pop(field, None)
+        answer["title"] = "为这次的新目标补齐约束"
+        answer["message"] = "这次需求与已保存的目标不同，或包含新的金额、期限。请确认目标名称、金额、已准备资金和期限；其他财务资料已保留，提交后重新计算方案。"
+        answer["templates"] = []
+        return answer
+    answer = await _build_financial_analysis(session, user_id)
+    if focus != "allocation" or answer["type"] != "financial_analysis":
+        return answer
+    answer["title"] = "你的整体资产配置与现金流建议"
+    answer["summary"] = (
+        f"当前现金与可用余额 {answer['balance_sheet']['cash']}，投资资产 {answer['balance_sheet']['investments']}，"
+        f"净资产 {answer['balance_sheet']['net_worth']}；月度可持续结余 {answer['cashflow']['surplus']}。"
+        "先检查应急金与负债，再安排可投资资金。"
+    )
+    answer["allocation"]["method"] = "整体配置：先覆盖应急金、核对负债成本，再保留已记录的目标资金，剩余资金按风险约束匹配产品。"
+    answer["observations"].insert(0, f"已保存目标“{profile.goal_name}”仍作为资金预留约束，本次整体配置分析不会自动修改它。若不再需要该目标，请更新财务档案后重算。")
+    answer["profile"]["data_quality"] = "基于已保存的财务资料；请核对是否仍符合当前情况"
+    recommendation = answer["recommendation"]
+    recommendation["actions"] = [
+        action if profile.goal_name not in action else "已记录目标的储蓄节奏仅作为原档案参考；请先确认是否继续保留，再调整每月投入。"
+        for action in recommendation["actions"]
+    ]
+    answer["request_focus"] = "allocation"
+    return answer
+
+
+async def _build_financial_analysis(session, user_id: int) -> dict:
     user = await session.get(User, user_id)
     profile = await get_profile(session, user_id)
     if profile is None:
